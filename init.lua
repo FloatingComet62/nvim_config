@@ -451,7 +451,9 @@ require('mason').setup()
 require('mason-lspconfig').setup()
 
 local servers = {
-  -- clangd = {},
+  clangd = {
+    filetypes = {"c", "cpp"}
+  },
   -- gopls = {},
   -- pyright = {},
   rust_analyzer = {
@@ -465,7 +467,15 @@ local servers = {
   zls = {
     filetypes = {"zig"}
   },
-  -- tsserver = {},
+  cmake = {
+    filetypes = {"txt"}
+  },
+  -- prettier = {
+  --   filetypes = {"css", "html", "jsx", "js", "ts", "tsx", "md", "json", "vue", "yaml"}
+  -- },
+  tsserver = {
+    filetypes = {"ts"}
+  },
   -- html = { filetypes = { 'html', 'twig', 'hbs'} },
 
   lua_ls = {
