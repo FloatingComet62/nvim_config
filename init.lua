@@ -247,6 +247,8 @@ vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next diagnos
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Open floating diagnostic message' })
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostics list' })
 vim.keymap.set('n', '<leader>y', ':bd<CR>', { noremap = true, silent = true, desc='Delete buffer' })
+
+-- Replaced by Harpoon
 -- vim.keymap.set('n', '<leader>n', ':bn<CR>', { noremap = true, silent = true, desc='Next buffer' })
 -- vim.keymap.set('n', '<leader>p', ':bp<CR>', { noremap = true, silent = true, desc='Previous buffer' })
 
@@ -268,20 +270,26 @@ vim.api.nvim_create_autocmd('TextYankPost', {
 vim.keymap.set("n", "<leader>tl", function() vim.o.background = "light" end, { desc = "Change the theme to light" })
 vim.keymap.set("n", "<leader>td", function() vim.o.background = "dark" end, { desc = "Change the theme to dark" })
 
+-- [[ Hide Window ]]
+vim.keymap.set("n", "<leader>hh", function() vim.cmd("hide") end, { desc = "Hide the buffer" })
+
 -- [[ Telescope ]]
-require('telescope').setup {
+local telescope = require 'telescope'
+telescope.setup {
   defaults = {
     mappings = {
       i = {
         ['<C-u>'] = false,
         ['<C-d>'] = false,
+        -- ['<C-h>'] = require('telescope.actions').select_horizontal,
+        -- use <C-x> dickhead, it's the convention
       },
     },
   },
 }
 
 -- Enable telescope fzf native, if installed
-pcall(require('telescope').load_extension, 'fzf')
+pcall(telescope.load_extension, 'fzf')
 
 local function find_git_root()
   local current_file = vim.api.nvim_buf_get_name(0)
@@ -301,42 +309,41 @@ local function find_git_root()
   return git_root
 end
 
-local function live_grep_git_root()
+local telescope_builtin = require 'telescope.builtin';
+
+vim.api.nvim_create_user_command('LiveGrepGitRoot', function()
   local git_root = find_git_root()
   if git_root then
-    require('telescope.builtin').live_grep {
+    telescope_builtin.live_grep {
       search_dirs = { git_root },
     }
   end
-end
+end, {})
 
-vim.api.nvim_create_user_command('LiveGrepGitRoot', live_grep_git_root, {})
-
-vim.keymap.set('n', '<leader>?', require('telescope.builtin').oldfiles, { desc = '[?] Find recently opened files' })
-vim.keymap.set('n', '<leader><space>', require('telescope.builtin').buffers, { desc = '[ ] Find existing buffers' })
+vim.keymap.set('n', '<leader>?', telescope_builtin.oldfiles, { desc = '[?] Find recently opened files' })
+vim.keymap.set('n', '<leader><space>', telescope_builtin.buffers, { desc = '[ ] Find existing buffers' })
 vim.keymap.set('n', '<leader>/', function()
-  require('telescope.builtin').current_buffer_fuzzy_find(require('telescope.themes').get_dropdown {
+  telescope_builtin.current_buffer_fuzzy_find(require('telescope.themes').get_dropdown {
     winblend = 10,
     previewer = false,
   })
 end, { desc = '[/] Fuzzily search in current buffer' })
 
-local function telescope_live_grep_open_files()
-  require('telescope.builtin').live_grep {
+vim.keymap.set('n', '<leader>s/', function()
+  telescope_builtin.live_grep {
     grep_open_files = true,
     prompt_title = 'Live Grep in Open Files',
   }
-end
-vim.keymap.set('n', '<leader>s/', telescope_live_grep_open_files, { desc = '[S]earch [/] in Open Files' })
-vim.keymap.set('n', '<leader>ss', require('telescope.builtin').builtin, { desc = '[S]earch [S]elect Telescope' })
-vim.keymap.set('n', '<leader>gf', require('telescope.builtin').git_files, { desc = 'Search [G]it [F]iles' })
-vim.keymap.set('n', '<leader>sf', require('telescope.builtin').find_files, { desc = '[S]earch [F]iles' })
-vim.keymap.set('n', '<leader>sh', require('telescope.builtin').help_tags, { desc = '[S]earch [H]elp' })
-vim.keymap.set('n', '<leader>sw', require('telescope.builtin').grep_string, { desc = '[S]earch current [W]ord' })
-vim.keymap.set('n', '<leader>sg', require('telescope.builtin').live_grep, { desc = '[S]earch by [G]rep' })
+end, { desc = '[S]earch [/] in Open Files' })
+vim.keymap.set('n', '<leader>ss', telescope_builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
+vim.keymap.set('n', '<leader>gf', telescope_builtin.git_files, { desc = 'Search [G]it [F]iles' })
+vim.keymap.set('n', '<leader>sf', telescope_builtin.find_files, { desc = '[S]earch [F]iles' })
+vim.keymap.set('n', '<leader>sh', telescope_builtin.help_tags, { desc = '[S]earch [H]elp' })
+vim.keymap.set('n', '<leader>sw', telescope_builtin.grep_string, { desc = '[S]earch current [W]ord' })
+vim.keymap.set('n', '<leader>sg', telescope_builtin.live_grep, { desc = '[S]earch by [G]rep' })
 vim.keymap.set('n', '<leader>sG', ':LiveGrepGitRoot<cr>', { desc = '[S]earch by [G]rep on Git Root' })
-vim.keymap.set('n', '<leader>sd', require('telescope.builtin').diagnostics, { desc = '[S]earch [D]iagnostics' })
-vim.keymap.set('n', '<leader>sr', require('telescope.builtin').resume, { desc = '[S]earch [R]esume' })
+vim.keymap.set('n', '<leader>sd', telescope_builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
+vim.keymap.set('n', '<leader>sr', telescope_builtin.resume, { desc = '[S]earch [R]esume' })
 
 -- [[ Treesitter ]]
 vim.defer_fn(function()
@@ -412,12 +419,12 @@ local on_attach = function(_, bufnr)
     vim.lsp.buf.code_action { context = { only = { 'quickfix', 'refactor', 'source' } } }
   end, '[C]ode [A]ction')
 
-  nmap('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
-  nmap('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
-  nmap('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
-  nmap('<leader>D', require('telescope.builtin').lsp_type_definitions, 'Type [D]efinition')
-  nmap('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
-  nmap('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
+  nmap('gd', telescope_builtin.lsp_definitions, '[G]oto [D]efinition')
+  nmap('gr', telescope_builtin.lsp_references, '[G]oto [R]eferences')
+  nmap('gI', telescope_builtin.lsp_implementations, '[G]oto [I]mplementation')
+  nmap('<leader>D', telescope_builtin.lsp_type_definitions, 'Type [D]efinition')
+  nmap('<leader>ds', telescope_builtin.lsp_document_symbols, '[D]ocument [S]ymbols')
+  nmap('<leader>ws', telescope_builtin.lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
   nmap('K', vim.lsp.buf.hover, 'Hover Documentation')
   nmap('<C-k>', vim.lsp.buf.signature_help, 'Signature Documentation')
   nmap('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
@@ -432,17 +439,18 @@ local on_attach = function(_, bufnr)
   end, { desc = 'Format current buffer with LSP' })
 end
 
-require('which-key').register {
+local which_key = require 'which-key'
+which_key.register {
   ['<leader>c'] = { name = '[C]ode', _ = 'which_key_ignore' },
   ['<leader>d'] = { name = '[D]ocument', _ = 'which_key_ignore' },
   ['<leader>g'] = { name = '[G]it', _ = 'which_key_ignore' },
   ['<leader>h'] = { name = 'Git [H]unk', _ = 'which_key_ignore' },
   ['<leader>r'] = { name = '[R]ename', _ = 'which_key_ignore' },
   ['<leader>s'] = { name = '[S]earch', _ = 'which_key_ignore' },
-  ['<leader>t'] = { name = '[T]oggle', _ = 'which_key_ignore' },
+  ['<leader>t'] = { name = '[T]oggle, [T]heme and [T]erminal', _ = 'which_key_ignore' },
   ['<leader>w'] = { name = '[W]orkspace', _ = 'which_key_ignore' },
 }
-require('which-key').register({
+which_key.register({
   ['<leader>'] = { name = 'VISUAL <leader>' },
   ['<leader>h'] = { 'Git [H]unk' },
 }, { mode = 'v' })
@@ -563,17 +571,38 @@ harpoon:setup({})
 vim.keymap.set("n", "<leader>a", function() harpoon:list():append() end, { desc = '[A]dd to the harpoon list' })
 vim.keymap.set("n", "<leader>h", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end, { desc = 'Open the [h]arpoon list' })
 
+vim.keymap.set("n", "<leader>hc", function() harpoon:list():clear() end, { desc = '[C]lear the harpoon list' })
 
 vim.keymap.set("n", "<leader>1", function() harpoon:list():select(1) end, { desc = 'Go to [1]st item in the harpoon list' })
 vim.keymap.set("n", "<leader>2", function() harpoon:list():select(2) end, { desc = 'Go to [2]nd item in the harpoon list' })
 vim.keymap.set("n", "<leader>3", function() harpoon:list():select(3) end, { desc = 'Go to [3]rd item in the harpoon list' })
 vim.keymap.set("n", "<leader>4", function() harpoon:list():select(4) end, { desc = 'Go to [4]th item in the harpoon list' })
+vim.keymap.set("n", "<leader>5", function() harpoon:list():select(5) end, { desc = 'Go to [T]erminal in the harpoon list' })
 
 -- Toggle previous & next buffers stored within Harpoon list
 vim.keymap.set("n", "<leader>p", function() harpoon:list():prev() end, { desc = 'Go [p]revious in the harpoon list' })
 vim.keymap.set("n", "<leader>f", function() harpoon:list():next() end, { desc = 'Go [f]orward in the harpoon list' })
 
+-- Keymaps for opening in splits
+-- https://github.com/ThePrimeagen/harpoon/pull/430/commits/c57cb1995153cd13cc62386d2bd66c84762f7d81
+harpoon:extend({
+  UI_CREATE = function(cx)
+    vim.keymap.set("n", "<C-v>", function()
+      harpoon.ui:select_menu_item({ vsplit = true })
+    end, { buffer = cx.bufnr })
+
+    vim.keymap.set("n", "<C-x>", function()
+      harpoon.ui:select_menu_item({ split = true })
+    end, { buffer = cx.bufnr })
+
+    vim.keymap.set("n", "<C-t>", function()
+      harpoon.ui:select_menu_item({ tabedit = true })
+    end, { buffer = cx.bufnr })
+  end
+})
+
 RefreshGuiFont = function()
+  -- DreamBerd
   vim.opt.guifont = string.format("%s:h%s",vim.g.gui_font_face, vim.g.gui_font_size)
 end
 
