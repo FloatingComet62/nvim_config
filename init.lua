@@ -239,13 +239,16 @@ vim.g.gui_font_size = vim.g.gui_font_default_size
 -- vim: ts=2 sts=2 sw=2 et
 
 -- [[ Basic Keymaps ]]
+local nmap = function(keys, func, desc)
+  vim.keymap.set('n', keys, func, { desc = desc })
+end
 vim.keymap.set({ 'n', 'v' }, '<Space>', '<Nop>', { silent = true })
 vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
-vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous diagnostic message' })
-vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next diagnostic message' })
-vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Open floating diagnostic message' })
-vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostics list' })
+nmap('[d', vim.diagnostic.goto_prev, 'Go to previous diagnostic message')
+nmap(']d', vim.diagnostic.goto_next, 'Go to next diagnostic message')
+nmap('<leader>e', vim.diagnostic.open_float, 'Open floating diagnostic message')
+nmap( '<leader>q', vim.diagnostic.setloclist, 'Open diagnostics list')
 vim.keymap.set('n', '<leader>y', ':bd<CR>', { noremap = true, silent = true, desc='Delete buffer' })
 
 -- Replaced by Harpoon
@@ -253,8 +256,23 @@ vim.keymap.set('n', '<leader>y', ':bd<CR>', { noremap = true, silent = true, des
 -- vim.keymap.set('n', '<leader>p', ':bp<CR>', { noremap = true, silent = true, desc='Previous buffer' })
 
 -- [[ Terminal ]]
-vim.keymap.set("n", "<leader>tv", function() vim.cmd("vsplit | terminal") end, { desc = "Create a vertical terminal split" })
-vim.keymap.set("n", "<leader>th", function() vim.cmd("split | terminal") end, { desc = "Create a horizontal terminal split" })
+nmap("<leader>tv", function() vim.cmd("vsplit | terminal") end, "Create a vertical terminal split")
+nmap("<leader>th", function() vim.cmd("split | terminal") end, "Create a horizontal terminal split")
+-- Escaping the terminal
+vim.keymap.set("t", "<leader><esc>", "<C-\\><C-n>", { noremap = true })
+
+-- [[ Naivgating between splits ]]
+local nav_splits = function(key)
+  vim.keymap.set(
+    "n",
+    "<leader>" .. key,
+    "<C-w>" .. key,
+    { noremap = true, silent = true, desc = "Move around splits" }
+  );
+end
+for i = 0, 4 do
+  nav_splits(("hjkl"):sub(i, i))
+end
 
 -- [[ Highlight on yank ]]
 local highlight_group = vim.api.nvim_create_augroup('YankHighlight', { clear = true })
@@ -267,11 +285,35 @@ vim.api.nvim_create_autocmd('TextYankPost', {
 })
 
 -- [[ Color Scheme ]]
-vim.keymap.set("n", "<leader>tl", function() vim.o.background = "light" end, { desc = "Change the theme to light" })
-vim.keymap.set("n", "<leader>td", function() vim.o.background = "dark" end, { desc = "Change the theme to dark" })
+nmap("<leader>tl", function() vim.o.background = "light" end, "Change the theme to light")
+nmap("<leader>td", function() vim.o.background = "dark" end, "Change the theme to dark")
 
 -- [[ Hide Window ]]
-vim.keymap.set("n", "<leader>hh", function() vim.cmd("hide") end, { desc = "Hide the buffer" })
+nmap("<leader>z", function() vim.cmd("hide") end, "Hide the buffer")
+
+-- [[ Font size ]]
+RefreshGuiFont = function()
+  -- DreamBerd
+  vim.opt.guifont = string.format("%s:h%s",vim.g.gui_font_face, vim.g.gui_font_size)
+end
+
+ResizeGuiFont = function(delta)
+  vim.g.gui_font_size = vim.g.gui_font_size + delta
+  RefreshGuiFont()
+end
+
+ResetGuiFont = function ()
+  vim.g.gui_font_size = vim.g.gui_font_default_size
+  RefreshGuiFont()
+end
+
+ResetGuiFont()
+
+local opts = { noremap = true, silent = true }
+
+vim.keymap.set("n", "<leader>+", function() ResizeGuiFont(1)  end, opts)
+vim.keymap.set("n", "<leader>-", function() ResizeGuiFont(-1) end, opts)
+vim.keymap.set("n", "<leader>=", function() ResetGuiFont() end, opts)
 
 -- [[ Telescope ]]
 local telescope = require 'telescope'
@@ -320,30 +362,30 @@ vim.api.nvim_create_user_command('LiveGrepGitRoot', function()
   end
 end, {})
 
-vim.keymap.set('n', '<leader>?', telescope_builtin.oldfiles, { desc = '[?] Find recently opened files' })
-vim.keymap.set('n', '<leader><space>', telescope_builtin.buffers, { desc = '[ ] Find existing buffers' })
-vim.keymap.set('n', '<leader>/', function()
+nmap('<leader>?', telescope_builtin.oldfiles, '[?] Find recently opened files')
+nmap('<leader><space>', telescope_builtin.buffers, '[ ] Find existing buffers')
+nmap('<leader>/', function()
   telescope_builtin.current_buffer_fuzzy_find(require('telescope.themes').get_dropdown {
     winblend = 10,
     previewer = false,
   })
-end, { desc = '[/] Fuzzily search in current buffer' })
+end, '[/] Fuzzily search in current buffer')
 
-vim.keymap.set('n', '<leader>s/', function()
+nmap('<leader>s/', function()
   telescope_builtin.live_grep {
     grep_open_files = true,
     prompt_title = 'Live Grep in Open Files',
   }
-end, { desc = '[S]earch [/] in Open Files' })
-vim.keymap.set('n', '<leader>ss', telescope_builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
-vim.keymap.set('n', '<leader>gf', telescope_builtin.git_files, { desc = 'Search [G]it [F]iles' })
-vim.keymap.set('n', '<leader>sf', telescope_builtin.find_files, { desc = '[S]earch [F]iles' })
-vim.keymap.set('n', '<leader>sh', telescope_builtin.help_tags, { desc = '[S]earch [H]elp' })
-vim.keymap.set('n', '<leader>sw', telescope_builtin.grep_string, { desc = '[S]earch current [W]ord' })
-vim.keymap.set('n', '<leader>sg', telescope_builtin.live_grep, { desc = '[S]earch by [G]rep' })
-vim.keymap.set('n', '<leader>sG', ':LiveGrepGitRoot<cr>', { desc = '[S]earch by [G]rep on Git Root' })
-vim.keymap.set('n', '<leader>sd', telescope_builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
-vim.keymap.set('n', '<leader>sr', telescope_builtin.resume, { desc = '[S]earch [R]esume' })
+end, '[S]earch [/] in Open Files')
+nmap('<leader>ss', telescope_builtin.builtin, '[S]earch [S]elect Telescope')
+nmap('<leader>gf', telescope_builtin.git_files, 'Search [G]it [F]iles')
+nmap('<leader>sf', telescope_builtin.find_files, '[S]earch [F]iles')
+nmap('<leader>sh', telescope_builtin.help_tags, '[S]earch [H]elp')
+nmap('<leader>sw', telescope_builtin.grep_string, '[S]earch current [W]ord')
+nmap('<leader>sg', telescope_builtin.live_grep, '[S]earch by [G]rep')
+nmap('<leader>sG', ':LiveGrepGitRoot<cr>', '[S]earch by [G]rep on Git Root')
+nmap('<leader>sd', telescope_builtin.diagnostics, '[S]earch [D]iagnostics')
+nmap('<leader>sr', telescope_builtin.resume, '[S]earch [R]esume')
 
 -- [[ Treesitter ]]
 vim.defer_fn(function()
@@ -406,31 +448,30 @@ end, 0)
 
 -- [[ LSP ]]
 local on_attach = function(_, bufnr)
-  local nmap = function(keys, func, desc)
+  local lsp_nmap = function(keys, func, desc)
     if desc then
       desc = 'LSP: ' .. desc
     end
-
-    vim.keymap.set('n', keys, func, { buffer = bufnr, desc = desc })
+    nmap(keys, func, desc)
   end
 
-  nmap('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
-  nmap('<leader>ca', function()
+  lsp_nmap('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
+  lsp_nmap('<leader>ca', function()
     vim.lsp.buf.code_action { context = { only = { 'quickfix', 'refactor', 'source' } } }
   end, '[C]ode [A]ction')
 
-  nmap('gd', telescope_builtin.lsp_definitions, '[G]oto [D]efinition')
-  nmap('gr', telescope_builtin.lsp_references, '[G]oto [R]eferences')
-  nmap('gI', telescope_builtin.lsp_implementations, '[G]oto [I]mplementation')
-  nmap('<leader>D', telescope_builtin.lsp_type_definitions, 'Type [D]efinition')
-  nmap('<leader>ds', telescope_builtin.lsp_document_symbols, '[D]ocument [S]ymbols')
-  nmap('<leader>ws', telescope_builtin.lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
-  nmap('K', vim.lsp.buf.hover, 'Hover Documentation')
-  nmap('<C-k>', vim.lsp.buf.signature_help, 'Signature Documentation')
-  nmap('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
-  nmap('<leader>wa', vim.lsp.buf.add_workspace_folder, '[W]orkspace [A]dd Folder')
-  nmap('<leader>wr', vim.lsp.buf.remove_workspace_folder, '[W]orkspace [R]emove Folder')
-  nmap('<leader>wl', function()
+  lsp_nmap('gd', telescope_builtin.lsp_definitions, '[G]oto [D]efinition')
+  lsp_nmap('gr', telescope_builtin.lsp_references, '[G]oto [R]eferences')
+  lsp_nmap('gI', telescope_builtin.lsp_implementations, '[G]oto [I]mplementation')
+  lsp_nmap('<leader>D', telescope_builtin.lsp_type_definitions, 'Type [D]efinition')
+  lsp_nmap('<leader>ds', telescope_builtin.lsp_document_symbols, '[D]ocument [S]ymbols')
+  lsp_nmap('<leader>ws', telescope_builtin.lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
+  lsp_nmap('K', vim.lsp.buf.hover, 'Hover Documentation')
+  lsp_nmap('<C-k>', vim.lsp.buf.signature_help, 'Signature Documentation')
+  lsp_nmap('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
+  lsp_nmap('<leader>wa', vim.lsp.buf.add_workspace_folder, '[W]orkspace [A]dd Folder')
+  lsp_nmap('<leader>wr', vim.lsp.buf.remove_workspace_folder, '[W]orkspace [R]emove Folder')
+  lsp_nmap('<leader>wl', function()
     print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
   end, '[W]orkspace [L]ist Folders')
 
@@ -449,6 +490,8 @@ which_key.register {
   ['<leader>s'] = { name = '[S]earch', _ = 'which_key_ignore' },
   ['<leader>t'] = { name = '[T]oggle, [T]heme and [T]erminal', _ = 'which_key_ignore' },
   ['<leader>w'] = { name = '[W]orkspace', _ = 'which_key_ignore' },
+  ['<leader>x'] = { name = 'Horizontal splitting', _ = 'which_key_ignore' },
+  ['<leader>v'] = { name = '[V]ertical splitting', _ = 'which_key_ignore' },
 }
 which_key.register({
   ['<leader>'] = { name = 'VISUAL <leader>' },
@@ -565,23 +608,52 @@ cmp.setup {
   },
 }
 
+-- [[ Harpoon ]]
 local harpoon = require("harpoon")
 harpoon:setup({})
 
-vim.keymap.set("n", "<leader>a", function() harpoon:list():append() end, { desc = '[A]dd to the harpoon list' })
-vim.keymap.set("n", "<leader>h", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end, { desc = 'Open the [h]arpoon list' })
+nmap("<leader>a", function() harpoon:list():append() end, '[A]dd to the harpoon list')
+nmap("<leader>s", function()
+  harpoon.ui:toggle_quick_menu(harpoon:list())
+end, 'Open the [h]arpoon list')
+nmap("<leader>hc", function() harpoon:list():clear() end, '[C]lear the harpoon list')
 
-vim.keymap.set("n", "<leader>hc", function() harpoon:list():clear() end, { desc = '[C]lear the harpoon list' })
+local harpoon_mapping = function(num)
+  nmap(
+    "<leader>" .. num,
+    function()
+      harpoon:list():select(num)
+    end,
+    'Go to Item[' .. num .. '] in the harpoon list')
+end
+local harpoon_mapping_horizontal = function(num)
+  nmap(
+    "<leader>x" .. num,
+    function()
+      vim.cmd("split")
+      harpoon:list():select(num)
+    end,
+    'Open a horizontal split of Item[' .. num .. '] in the harpoon list')
+end
+local harpoon_mapping_vertical = function(num)
+  nmap(
+    "<leader>v" .. num,
+    function()
+      vim.cmd("vsplit")
+      harpoon:list():select(num)
+    end,
+    'Open vertical split of Item[' .. num ..'] in the harpoon list')
+end
 
-vim.keymap.set("n", "<leader>1", function() harpoon:list():select(1) end, { desc = 'Go to [1]st item in the harpoon list' })
-vim.keymap.set("n", "<leader>2", function() harpoon:list():select(2) end, { desc = 'Go to [2]nd item in the harpoon list' })
-vim.keymap.set("n", "<leader>3", function() harpoon:list():select(3) end, { desc = 'Go to [3]rd item in the harpoon list' })
-vim.keymap.set("n", "<leader>4", function() harpoon:list():select(4) end, { desc = 'Go to [4]th item in the harpoon list' })
-vim.keymap.set("n", "<leader>5", function() harpoon:list():select(5) end, { desc = 'Go to [T]erminal in the harpoon list' })
+for i = 1, 5, 1 do
+  harpoon_mapping(i)
+  harpoon_mapping_vertical(i)
+  harpoon_mapping_horizontal(i)
+end
 
 -- Toggle previous & next buffers stored within Harpoon list
-vim.keymap.set("n", "<leader>p", function() harpoon:list():prev() end, { desc = 'Go [p]revious in the harpoon list' })
-vim.keymap.set("n", "<leader>f", function() harpoon:list():next() end, { desc = 'Go [f]orward in the harpoon list' })
+nmap("<leader>p", function() harpoon:list():prev() end, 'Go [p]revious in the harpoon list')
+nmap("<leader>f", function() harpoon:list():next() end, 'Go [f]orward in the harpoon list')
 
 -- Keymaps for opening in splits
 -- https://github.com/ThePrimeagen/harpoon/pull/430/commits/c57cb1995153cd13cc62386d2bd66c84762f7d81
@@ -600,26 +672,3 @@ harpoon:extend({
     end, { buffer = cx.bufnr })
   end
 })
-
-RefreshGuiFont = function()
-  -- DreamBerd
-  vim.opt.guifont = string.format("%s:h%s",vim.g.gui_font_face, vim.g.gui_font_size)
-end
-
-ResizeGuiFont = function(delta)
-  vim.g.gui_font_size = vim.g.gui_font_size + delta
-  RefreshGuiFont()
-end
-
-ResetGuiFont = function ()
-  vim.g.gui_font_size = vim.g.gui_font_default_size
-  RefreshGuiFont()
-end
-
-ResetGuiFont()
-
-local opts = { noremap = true, silent = true }
-
-vim.keymap.set("n", "<leader>+", function() ResizeGuiFont(1)  end, opts)
-vim.keymap.set("n", "<leader>-", function() ResizeGuiFont(-1) end, opts)
-vim.keymap.set("n", "<leader>=", function() ResetGuiFont() end, opts)
